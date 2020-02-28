@@ -1,0 +1,179 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+    "handler": "Microsoft.Azure.CreateUIDef",
+    "version": "0.1.2-preview",
+    "parameters": {
+        "basics": [
+            {
+                "name": "adminUsername",
+                "type": "Microsoft.Compute.UserNameTextBox",
+                "label": "Admin username",
+                "toolTip": "Admin username for the Teradici PCoIP VM.",
+                "osPlatform": "Windows"
+            },
+            {
+                "name": "adminPassword",
+                "type": "Microsoft.Compute.CredentialsCombo",
+                "label": {
+                    "password": "Password",
+                    "confirmPassword": "Confirm password"
+                },
+                "toolTip": {
+                    "password": "Admin password for the Teradici PCoIP VM."
+                },
+                "constraints": {
+                    "required": true,
+                    "customPasswordRegex": "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{12,}$",
+                    "customValidationMessage": "The password must be alphanumeric, contain at least 12 characters, and have at least 1 letter and 1 number."
+                  },
+                  "options": {
+                    "hideConfirmation": false
+                  },
+                  "osPlatform": "Windows",
+                  "visible": true
+            }
+        ],
+
+        "steps": [
+            {
+                "name": "infrastructureConfig",
+                "label": "PCoIP Agent network",
+                "subLabel": {
+                    "preValidation": "Configure the PCoIP Agent settings",
+                    "postValidation": "Done"
+            },
+                "bladeTitle": "PCoIP Agent settings",
+                "elements": [
+                    {
+                        "name": "vmSize",
+                        "type": "Microsoft.Compute.SizeSelector",
+                        "label": "Teradici PCoIP Agent VM size",
+                        "toolTip": "The size of the virtual machine for the Teradici PCoIP Agent.",
+                        "recommendedSizes": [
+                            "Standard_B2ms",
+                            "Standard_D2s_v3"
+                         ],
+                        "constraints": {
+                            "allowedSizes": [
+                                "Standard_B2s",
+                                "Standard_B2ms",
+                                "Standard_D2s_v3",
+                                "Standard_B4ms",
+                                "Standard_DS2_v2",
+                                "Standard_D4s_v3",
+                                "Standard_B8ms",
+                                "Standard_DS3_v2",
+                                "Standard_B12ms",
+                                "Standard_D8s_v3",
+                                "Standard_B16ms",
+                                "Standard_DS4_v2",
+                                "Standard_B20ms",
+                                "Standard_D16s_v3",
+                                "Standard_DS5_v2",
+                                "Standard_D32s_v3",
+                                "Standard_D64s_v3",
+                                "Standard_D48s_v3"
+                             ]
+                        },
+                        "osPlatform": "Windows",
+                        "imageReference": {
+                            "publisher": "MicrosoftWindowsServer",
+                            "offer": "WindowsServer",
+                            "sku": "2016-Datacenter"
+                        }
+                    },
+                    {
+                      "name": "dnsAndPublicIP",
+                      "type": "Microsoft.Network.PublicIpAddressCombo",
+                      "label": {
+                        "publicIpAddress": "PCoIP Agent public IP address name",
+                        "domainNameLabel": "DNS Prefix"
+                      },
+                      "toolTip": {
+                        "domainNameLabel": "Unique DNS Prefix for the PCoIP Agent public IP addresses."
+                      },
+                      "defaultValue": {
+                        "publicIpAddressName": "TeraDAgent-IP",
+                        "domainNameLabel": "[concat('terad', take(replace(guid(), '-', ''), 6))]"
+                      },
+                      "options": {
+                        "hideNone": false,
+                        "hideDomainNameLabel": false
+
+                      }
+                    },
+                    {
+                        "name": "virtualNetwork",
+                        "type": "Microsoft.Network.VirtualNetworkCombo",
+                        "label": {
+                            "virtualNetwork": "Virtual network",
+                            "subnets": "Subnets"
+                        },
+                        "toolTip": {
+                            "virtualNetwork": "Virtual Network Name",
+                            "subnets": "Subnet requried for Azure Application"
+                        },
+                        "defaultValue": {
+                            "name": "TeraDAgent-vnet",
+                            "addressPrefixSize": "/24"
+                        },
+                        "constraints": {
+                            "minAddressPrefixSize": "/24"
+                        },
+                        "subnets": {
+                            "subnet1": {
+                                "label": "Subnet name",
+                                "defaultValue": {
+                                    "name": "TeraDAgent-subnet",
+                                    "addressPrefixSize": "/26"
+                                },
+                                "constraints": {
+                                    "minAddressPrefixSize": "/26",
+                                    "minAddressCount": 12,
+                                    "requireContiguousAddresses": false
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "name": "TeraRegKey",
+                        "type": "Microsoft.Common.TextBox",
+                        "label": "Teradici CAS Registration Key",
+                        "toolTip": "This optional field can be used to enter your registration code with the format: A1BC3D6Y2FVM@A123-4567-890B-CDEF. See the previous panel for details on how to purchase or access a free trial. For more licensing options please leave this field blank and refer to the administration guide.",
+                        "constraints": {
+                            "required": false,
+                            "regex": "^[0-9A-Za-z]{12}@[0-9A-Za-z]{4}-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}$",
+                            "validationMessage": "Only alphanumeric characters and dashes are allowed (for example: A1BC3D6Y2FVM@A123-4567-890B-CDEF)."
+                        },
+                        "visible": true
+                    }
+                ]
+            }
+        ],
+        "outputs": {
+            "location": "[location()]",
+            "vmSize": "[steps('infrastructureConfig').vmSize]",
+            "adminName": "[basics('adminUsername')]",
+            "adminPass": "[basics('adminPassword').password]",
+            
+            "vNetName": "[steps('infrastructureConfig').virtualNetwork.name]",
+            "vNetRGName": "[steps('infrastructureConfig').virtualNetwork.resourceGroup]",
+            "vNetARPrefixes": "[steps('infrastructureConfig').virtualNetwork.addressPrefixes]",
+            "VNetNewOrExisting": "[steps('infrastructureConfig').virtualNetwork.newOrExisting]",
+            "subNetName": "[steps('infrastructureConfig').virtualNetwork.subnets.subnet1.name]",
+            "subNetARPrefix": "[steps('infrastructureConfig').virtualNetwork.subnets.subnet1.addressPrefix]",
+
+            "publicIpName": "[steps('infrastructureConfig').dnsAndPublicIP.name]",
+            "publicIpDns": "[steps('infrastructureConfig').dnsAndPublicIP.domainNameLabel]",
+            "publicIpAllocationMethod":"[steps('infrastructureConfig').dnsAndPublicIP.publicIPAllocationMethod]",
+            "publicIpSku":"[steps('infrastructureConfig').dnsAndPublicIP.sku]",
+            "publicIpRGName":"[steps('infrastructureConfig').dnsAndPublicIP.resourceGroup]",
+            "publicIpNewOrExisting": "[steps('infrastructureConfig').dnsAndPublicIP.newOrExistingOrNone]",
+
+            "TeradiciRegKey": "[steps('infrastructureConfig').TeraRegKey]"
+
+        }
+    }
+}
+
+
