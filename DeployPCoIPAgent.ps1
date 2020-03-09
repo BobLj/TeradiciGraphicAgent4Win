@@ -45,11 +45,10 @@ param(
     $PCoIPAgentEXE
 )
 
-<# Test Configuration
-$TeraRegKey=''
+Test Configuration
+$TeraRegKey='CN1XHFS757XM82F1-2CAE-54A2-83BF'
 $PCoIPAgentUri= 'https://downloads.teradici.com/win/stable/'
 $PCoIPAgentEXE = 'pcoip-agent-graphics_20.01.1.exe'
-#>
 
 
 
