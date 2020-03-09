@@ -45,8 +45,8 @@ param(
     $PCoIPAgentEXE
 )
 
-Test Configuration
-$TeraRegKey=''
+#Test Configuration
+$TeraRegKey='CN1XHFS757XM82F1-2CAE-54A2-83BF'
 $PCoIPAgentUri= 'https://downloads.teradici.com/win/stable/'
 $PCoIPAgentEXE = 'pcoip-agent-graphics_20.01.1.exe'
 
@@ -58,7 +58,7 @@ $AgentLocation ='C:\Program Files\Teradici\PCoIP Agent\'
 
 
 $AgentDestination = $AgentDestinationPath + $PCoIPAgentEXE
-$PCoIPAgentURL = $PCoIPAgentUri
+$PCoIPAgentURL = $PCoIPAgentUri + $PCoIPAgentEXE
 
 Write-Output "TeraRegKey:      $TeraRegKey"
 Write-Output "PCoIPAgentURI:   $PCoIPAgentURI"
@@ -113,6 +113,7 @@ try {
     
     #Registering Agent with Licence Server
     Set-Location -Path  $AgentLocation
+    write-host $AgentLocation
 
     $Registered = & .\pcoip-register-host.ps1 -RegistrationCode $TeraRegKey
     Write-Output "Registering Teradici Host returned this result: $Registered"
