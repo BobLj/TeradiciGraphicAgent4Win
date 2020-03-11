@@ -10,6 +10,6 @@
     },
     
     "location": "NorthCentralUS",
-    "deploymentTemplateUri": "https://teradiciappjson.blob.core.windows.net/pcoipagentcontainer/main-template.json",	
+    "deploymentTemplateUri": "https://graphicsagentpcoip.blob.core.windows.net/pcoipagent/main-template.json",	
     "baseUri": "https://github.com/BobLj/TeradiciGraphicAgent4Win/main-template.json"	
 	}
