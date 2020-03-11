@@ -11,5 +11,5 @@
     
     "location": "northcentralus",
     "deploymentTemplateUri": "https://teradiciappjson.blob.core.windows.net/pcoipagentcontainer/main-template.json",	
-    "baseUri": "https://github.com/BobLj/TeradiciGraphicAgent4Win"	
+    "baseUri": "https://github.com/BobLj/TeradiciGraphicAgent4Win/main-template.json"	
 	}
