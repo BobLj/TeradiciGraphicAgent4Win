@@ -9,7 +9,7 @@
       "appKey": "S8K6j9N4kL*ReCZLw*bl/bj/yViE2hH:"
     },
     
-    "location": "NorthCentralUS",
-    "deploymentTemplateUri": "https://graphicsagentpcoip.blob.core.windows.net/pcoipagent/main-template.json",	
+    "location": "WestUS2",
+    "deploymentTemplateUri": "https://pcoipgraphicsagent.blob.core.windows.net/pcoip/main-template.json",	
     "baseUri": "https://github.com/BobLj/TeradiciGraphicAgent4Win/main-template.json"	
 	}
