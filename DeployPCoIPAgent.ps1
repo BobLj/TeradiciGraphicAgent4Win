@@ -22,21 +22,64 @@
 
 $CustomScriptExtPath = 'C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\1.9.3\Downloads\0\'
 $PCoIPAgent = 'https://downloads.teradici.com/win/stable/latest-graphics-agent.json'
+
 #Microsoft CAS Application GUID: 
 $CAsGUID = "0d95c7be-a922-5be2-841a-5381655bf4f1"
+
 
 #Disable Scheulded Tasks: ServerManager
 Get-ScheduledTask -TaskName ServerManager | Disable-ScheduledTask -Verbose
 
-#GET Latest version of the PCoIP Agent
-#$PCoIPLatestAgent ='pcoip-agent-graphics_20.01.1.exe'
-$PCoIPLatestAgent = $(Invoke-WebRequest $PCoIPAgent -UseBasicParsing -Verbose ).Content | ConvertFrom-Json
-#$PCoIPLatestAgent = 'https://downloads.teradici.com/win/stable/pcoip-agent-graphics.exe';
+$NVIDIA_DIR = "C:\Program Files\NVIDIA Corporation\NVSMI"
+$nvidia_driver_url = "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.1/431.79_grid_win10_server2016_server2019_64bit_international.exe"
 $TeradiciURL = 'https://downloads.teradici.com/win/stable/' + $PCoIPLatestAgent.filename
-$TeradiciKey  = '' 
-
+$TeradiciKey  = ''
+$PCoIPLatestAgent = $(Invoke-WebRequest $PCoIPAgent -UseBasicParsing -Verbose ).Content | ConvertFrom-Json
 $TeradiciDestinationPath = "C:\AzureData\"
+$driverDirectory = "C:\AzureData\"
 $TeradiciDestination = $TeradiciDestinationPath + $PCoIPLatestAgent.filename
+
+function Nvidia-is-Installed {
+    if (!(test-path $NVIDIA_DIR)) {
+        return $false
+    }
+
+    cd $NVIDIA_DIR
+    & .\nvidia-smi.exe
+    return $?
+    return $false
+}
+
+function Nvidia-Install {
+    "################################################################"
+    "Install NVIDIA GRID Driver"
+    "################################################################"
+
+    if (Nvidia-is-Installed) {
+        "NVIDIA driver already installed."
+        return
+    }
+
+    mkdir 'C:\Nvidia'
+    $driverDirectory = "C:\Nvidia"
+    $nvidiaDriverFileName = Split-Path ${nvidia_driver_url} -Leaf
+    $nvidiaDriverLocation = Split-Path ${nvidia_driver_url} -Parent
+    $destFile = $driverDirectory + "\" + $nvidiaDriverFileName
+    "Downloading NVIDIA GRID Driver from $nvidiaDriverLocation..."
+    (New-Object System.Net.WebClient).DownloadFile("${nvidia_driver_url}", $destFile)
+    "File Downloaded"
+
+    "Installing NVIDIA GRID Driver..."
+    $ret = Start-Process -FilePath $destFile -ArgumentList "/s /noeula /noreboot" -PassThru -Wait
+
+    if (!(Nvidia-is-Installed)) {
+        "ERROR: Failed to install NVIDIA GRID driver."
+        exit 1
+    }
+
+    "NVIDIA GRID Driver installed successfully."
+    $global:restart = $true
+}
 
 filter Timestamp {"$(Get-Date -Format o): $_"}
 
@@ -98,34 +141,26 @@ try {
     Write-Output "Registered Teradici Host " 
     
     & .\pcoip-validate-license.ps1
-    Write-Output "Validate Teradici Licence"   
+    Write-Output "Validate Teradici Licence" 
 
+}	
 
-
-<#
-"################################################################"
-"Restarting computer only if you had 1641 for return..."
-"################################################################"
-
-     $process.ExitCode = 0 All Success
-     $process.ExitCode = 1641 Success, Reboot Required 
-     $process.ExitCode = 2 All Installation aborted due to ERROR
-
-    if ( $process.ExitCode -eq 0 ) {
-        We dont need to restart?
-        restart-service -name PCoIPAgent
-        Write-Output "Restarted Teradici Service" 
-    else {
-
-         # We need to restart   
-        }
-    }    
-#>
-Restart-Computer -Force
-    
-
-}
 catch [Exception]{
     Write-Output $_.Exception.Message
     Write-Error $_.Exception.Message
 }
+
+Nvidia-Install
+
+PCoIP-Agent-Install
+
+"################################################################"
+"Restart Computer"
+"################################################################"
+if ($global:restart) {
+    "Restart required. Restarting..."
+    Restart-Computer -Force
+} else {
+    "No restart required"
+}
+
