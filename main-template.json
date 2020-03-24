@@ -36,7 +36,7 @@
   "variables": {
     "vmName": "TDGraphicsAgent",
     "location": "[resourceGroup().location]",
-    "vmSize": "Standard_NC6",
+    "vmSize": "Standard NC6s_v2",
     "domainNameLabel": "[concat('teravm',uniquestring(resourceGroup().id))]",
     "storageAccountName": "[concat('teradisk',uniquestring(resourceGroup().id))]",
     "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
