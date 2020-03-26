@@ -20,7 +20,6 @@
 #
 
 
-
 [CmdletBinding(DefaultParameterSetName = "Graphics")]
 
 param(
@@ -89,7 +88,7 @@ function Nvidia-Install {
 Nvidia-Install
 
 #Test Configuration
-$TeraRegKey='VFN6PT2FWM71@5453-BE5B-95AE-B3B3'
+$TeraRegKey=''
 $PCoIPAgentUri= 'https://downloads.teradici.com/win/stable/'
 $PCoIPAgentEXE = 'pcoip-agent-graphics_20.01.1.exe'
 
