@@ -124,7 +124,7 @@
     },
     "TeradiciRegKey": {
       "type": "securestring",
-      "defaultValue": "VFN6PT2FWM71@5453-BE5B-95AE-B3B3",
+      "defaultValue": "",
       "metadata": { "description": "Teradici temporary Registration Key" }
     },
     "_artifactsLocation": {
