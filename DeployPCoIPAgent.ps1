@@ -19,15 +19,6 @@
 # THE SOFTWARE.
 #
 
-<#
-    .SYNOPSIS
-        Configure Windows 10 Workstation with Teradici PCoIP.
-
-    .DESCRIPTION
-        Configure Windows 10 Workstation with Avid Media Composer.
-        Example command line: .\setupMachine.ps1 Avid Media Composer
-
-#>
 
 
 [CmdletBinding(DefaultParameterSetName = "Graphics")]
