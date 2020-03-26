@@ -19,25 +19,39 @@
 # THE SOFTWARE.
 #
 
+<#
+    .SYNOPSIS
+        Configure Windows 10 Workstation with Teradici PCoIP.
 
-$CustomScriptExtPath = 'C:\Packages\Plugins\Microsoft.Compute.CustomScriptExtension\1.9.3\Downloads\0\'
-$PCoIPAgent = 'https://downloads.teradici.com/win/stable/latest-graphics-agent.json'
+    .DESCRIPTION
+        Configure Windows 10 Workstation with Avid Media Composer.
+        Example command line: .\setupMachine.ps1 Avid Media Composer
 
-#Microsoft CAS Application GUID: 
-$CAsGUID = "0d95c7be-a922-5be2-841a-5381655bf4f1"
+#>
 
 
-#Disable Scheulded Tasks: ServerManager
-Get-ScheduledTask -TaskName ServerManager | Disable-ScheduledTask -Verbose
+[CmdletBinding(DefaultParameterSetName = "Graphics")]
+
+param(
+
+    [string]
+    [ValidateNotNullOrEmpty()]
+    $TeraRegKey,
+
+    [string]
+    [ValidateNotNullOrEmpty()]
+    $PCoIPAgentURI,
+
+    [string]
+    [ValidateNotNullOrEmpty()]
+    $PCoIPAgentEXE
+)
+
+#Install GPU Drivers
 
 $NVIDIA_DIR = "C:\Program Files\NVIDIA Corporation\NVSMI"
 $nvidia_driver_url = "https://storage.googleapis.com/nvidia-drivers-us-public/GRID/GRID9.1/431.79_grid_win10_server2016_server2019_64bit_international.exe"
-$TeradiciURL = 'https://downloads.teradici.com/win/stable/' + $PCoIPLatestAgent.filename
-$TeradiciKey  = ''
-$PCoIPLatestAgent = $(Invoke-WebRequest $PCoIPAgent -UseBasicParsing -Verbose ).Content | ConvertFrom-Json
-$TeradiciDestinationPath = "C:\AzureData\"
-$driverDirectory = "C:\AzureData\"
-$TeradiciDestination = $TeradiciDestinationPath + $PCoIPLatestAgent.filename
+
 
 function Nvidia-is-Installed {
     if (!(test-path $NVIDIA_DIR)) {
@@ -81,8 +95,33 @@ function Nvidia-Install {
     $global:restart = $true
 }
 
-filter Timestamp {"$(Get-Date -Format o): $_"}
+Nvidia-Install
 
+#Test Configuration
+$TeraRegKey='VFN6PT2FWM71@5453-BE5B-95AE-B3B3'
+$PCoIPAgentUri= 'https://downloads.teradici.com/win/stable/'
+$PCoIPAgentEXE = 'pcoip-agent-graphics_20.01.1.exe'
+
+
+
+
+#Install/Test Configuration
+$AgentDestinationPath = 'C:\AzureData\'
+$AgentLocation ='C:\Program Files\Teradici\PCoIP Agent\'
+
+
+$AgentDestination = $AgentDestinationPath + $PCoIPAgentEXE
+$PCoIPAgentURL = $PCoIPAgentUri + $PCoIPAgentEXE
+
+Write-Output "TeraRegKey:      $TeraRegKey"
+Write-Output "PCoIPAgentURI:   $PCoIPAgentURI"
+Write-Output "PCoIPAgentEXE:   $PCoIPAgentEXE"
+Write-Output "AgentDestination:$AgentDestination"
+Write-Output "PCoIPAgentURL:   $PCoIPAgentURL"
+
+
+#Disable Scheulded Tasks: ServerManager
+Get-ScheduledTask -TaskName ServerManager | Disable-ScheduledTask -Verbose
 
 function DownloadFileOverHttp($Url, $DestinationPath) {
     $secureProtocols = @()
@@ -103,64 +142,40 @@ function DownloadFileOverHttp($Url, $DestinationPath) {
 
 try {
    
-    If(!(test-path $TeradiciDestinationPath))  {
-        New-Item -ItemType Directory -Force -Path $TeradiciDestinationPath
+    #Set the Agent's destination 
+    If(!(test-path $AgentDestinationPath))  {
+        New-Item -ItemType Directory -Force -Path $AgentDestinationPath
     }
-    Set-Location -Path $TeradiciDestinationPath
+    Set-Location -Path $AgentDestinationPath
 
-    Write-Output "Downloading latest PCoIP standard agent "
-    DownloadFileOverHttp $TeradiciURL $TeradiciDestination
+    #Download Agent
+    Write-Output "Downloading latest PCoIP Graphics agent from $PCoIPAgentURL"
+    DownloadFileOverHttp $PCoIPAgentURL $AgentDestination
 
-
-    Write-Output "Install Teradici with "
-    $ArgumentList = ' /S /NoPostReboot _?"' + $TeradiciDestination +'"'
     
-    Write-Output "Teradici Destination at: $TeradiciDestination"
+    #Install Agent from Agent Destination 
+    Write-Output "Install Teradici with Destination Path: $AgentDestination"
+    $ArgumentList = ' /S /NoPostReboot _?"' + $AgentDestination +'"'
+
     Write-Output "Teradici Argument list at: $ArgumentList"
-    $process =  Start-Process -FilePath $TeradiciDestination -ArgumentList $ArgumentList -Wait -PassThru;     
-    Write-Output "Installed with Exit Code:"  
-    Write-Output   $process.ExitCode
-
-    Set-Location -Path  "C:\Program Files\Teradici\PCoIP Agent\"
-
-    $attempts = 2
-    do{
-       try{    
-                Write-Output "Registering Teradici Host attempt #:$attempts"
-                & .\pcoip-register-host.ps1 -RegistrationCode $TeradiciKey
-                break;
-
-        } catch [Exception]{
-                Write-Output $_.Exception.Message
-                Write-Error $_.Exception.Message
-        }
-        $attempts--
-        #if ($attempts -gt 0) { sleep $sleepInSeconds }
-    }while ($attempts -gt 0) 
+    $process =  Start-Process -FilePath $AgentDestination -ArgumentList $ArgumentList -Wait -PassThru;     
+    Write-Output "Installed PCoIP Agent with Exit Code:" $process.ExitCode
     
-    Write-Output "Registered Teradici Host " 
+    #Registering Agent with Licence Server
+    Set-Location -Path  $AgentLocation
+
+    $Registered = & .\pcoip-register-host.ps1 -RegistrationCode $TeraRegKey
+    Write-Output "Registering Teradici Host returned this result: $Registered"
+
+    #Validate Licence 
+    $Validate =& .\pcoip-validate-license.ps1
+    Write-Output "Validate Teradici Licence returned: $Validate"       
     
-    & .\pcoip-validate-license.ps1
-    Write-Output "Validate Teradici Licence" 
+    Write-Output "Restart VM..."   
+    Restart-Computer -Force
 
-}	
-
+}
 catch [Exception]{
     Write-Output $_.Exception.Message
     Write-Error $_.Exception.Message
 }
-
-Nvidia-Install
-
-PCoIP-Agent-Install
-
-"################################################################"
-"Restart Computer"
-"################################################################"
-if ($global:restart) {
-    "Restart required. Restarting..."
-    Restart-Computer -Force
-} else {
-    "No restart required"
-}
-
