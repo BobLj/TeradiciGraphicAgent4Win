@@ -1,422 +1,332 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-
-    "location": {
-      "type": "string",
-      "defaultValue": "[resourceGroup().location]",
-      "metadata": {
-        "description": "Resource Location."
-      }
-    },
-    "vmSize": {
-      "type": "string",
-      "defaultValue": "Standard_NC6s_v2",
-      "metadata": {
-        "description": "Virtual Machine Size."
-      }
-    },
     "adminName": {
       "type": "string",
       "metadata": {
         "type": "username",
-        "description": "Virtual Machine User Name ."
+        "description": "Admin user name."
       }
     },
-    "adminPass": {
-      "type":"securestring",
+    "adminPassword": {
+      "type": "securestring",
       "metadata": {
         "type": "password",
         "description": "Admin password."
       }
     },
-    "vNetName": {
-      "type": "string",
-      "defaultValue": "TeraDAgent-vnet",
-      "metadata": {
-        "description": "Teradici Agent Virtual Network name"
-      }
-    },
-    "vNetRGName": {
-      "type": "string",
-      "defaultValue": "[resourceGroup().name]",
-      "metadata": {
-        "description": "Name of the VNet Resource Group"
-      }
-    },
-    
-    "vNetARPrefixes": {
-      "type": "array",
-      "defaultValue": [
-        "10.0.0.0/26"
-      ],
-      "metadata": {
-        "description": "Address prefix of the virtual network"
-      }
-    },
-    "VNetNewOrExisting": {
-      "type": "string",
-      "defaultValue": "new",
-      "metadata": {
-        "description": "Virtual network is new or existing"
-      }
-    },
-    "subNetName": {
-      "type": "string",
-      "defaultValue": "TeraD-subnet1",
-      "metadata": {
-        "description": "Teradici Agent Subnet name"
-      }
-    },
-    "subNetARPrefix": {
-      "type": "string",
-      "defaultValue": "10.0.0.0/28",
-      "metadata": {
-        "description": "Subnet prefix of the virtual network"
-      }
-    },
-    "publicIpName": {
-      "type": "string",
-      "defaultValue": "TeraDAgent-IP",
-      "metadata": {
-        "description": "Unique public ip address name"
-      }
-    },
-    "publicIpDns": {
-      "type": "string",
-      "defaultValue": "[concat('tera', uniqueString(resourceGroup().id))]",
-      "metadata": {
-        "description": "Unique DNS Public IP attached the VM"
-      }
-    },
-    "publicIpAllocationMethod": {
-      "type": "string",
-      "defaultValue": "Dynamic",
-      "metadata": {
-        "description": "Plublic IP Allocoation Method"
-      }
-    },
-    "publicIpSku": {
-      "type": "string",
-      "defaultValue": "Basic",
-      "allowedValues": [
-        "Basic",
-        "Standard"
-      ],
-      "metadata": {
-        "description": "SKU number "
-      }
-    },
-    "publicIpRGName": {
-      "type": "string",
-      "defaultValue": "[resourceGroup().name]",
-      "metadata": {
-        "description": "Public IP Resource Group"
-      }
-    },
-    "publicIpNewOrExisting": {
-      "type": "string",
-      "defaultValue": "new",
-      "metadata": {
-        "description": "Plublic IP New or Existing?"
-      }
-    },
-    "TeradiciRegKey": {
-      "type": "securestring",
-      "defaultValue": "",
-      "metadata": { "description": "Teradici temporary Registration Key" }
-    },
-    "_artifactsLocation": {
+    "BaseDeploymentURI": {
       "type": "string",
       "metadata": {
-          "description": "The base URI where artifacts required by this template are located including a trailing '/'"
-      },
-      "defaultValue": "[deployment().properties.templateLink.uri]"
-  },
-  "_artifactsLocationSasToken": {
-      "type": "securestring",
+        "type": "baseuri",
+        "description": "Base URI for this deployment template."
+      }
+    },
+    "SessionID": {
+      "type": "string",
       "metadata": {
-          "description": "The sasToken required to access _artifactsLocation."
-      },
-      "defaultValue": ""
-  }
-},
- 
-"variables": {
-  "vmName": "TeraDAgent",
-  "location": "[parameters('location')]",
-  "vmSize": "[parameters('vmSize')]",
-  "domainNameLabel": "[parameters('publicIpDns')]",
-  "VMDiskType": "StandardSSD_LRS",
-    
-  "pubIpName": "[parameters('publicIpName')]",
-  "pubIpId": "[resourceId(parameters('publicIpRGName'), 'Microsoft.Network/publicIPAddresses',variables('pubIpName'))]",
-  "ipconfName": "[concat(variables('vmName'),'-ipconf')]",
+        "type": "sessionid",
+        "description": "Unique Test Drive session ID (GUID)."
+      }
+    }
 
-  "vnetName": "[parameters('vNetName')]",
-  "vnetId": "[resourceId(parameters('vNetRGName'), 'Microsoft.Network/virtualNetworks',variables('vnetName'))]",
-  "subnetName": "[parameters('subnetName')]",
-  "SubNetID":"[ resourceId(parameters('vNetRGName'), 'Microsoft.Network/virtualNetworks/subnets', variables('vNetName'), variables('subnetName'))]",
-    
-  "nicName": "[concat(variables('vmName'),'-nic')]",
-  "nicId": "[resourceId(parameters('vNetRGName'), 'Microsoft.Network/networkInterfaces',variables('nicName'))]",
+  },
   
-  "ExtName": "[concat(variables('vmName'),'/CustomExtV0.1')]",
-  "nsgName": "[concat(variables('vmName'),'-nsg')]",
-  "nsgId": "[resourceId(parameters('vNetRGName'), 'Microsoft.Network/networkSecurityGroups', variables('nsgName'))]",
+  "variables": {
+    "vmName": "PCoIPAgent",
+    "location": "[resourceGroup().location]",
+    "vmSize": "Standard_NV6",
+    "domainNameLabel": "[concat('teravm',uniquestring(resourceGroup().id))]",
+    "storageAccountName": "[concat('teradisk',uniquestring(resourceGroup().id))]",
+    "storageAccountId": "[resourceId('Microsoft.Storage/storageAccounts',variables('storageAccountName'))]",
+    "pubIpName": "[concat(variables('vmName'),'-ip')]",
+    "pubIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('pubIpName'))]",
+    "vnetName": "[concat(variables('vmName'),'-vnet')]",
+    "vnetId": "[resourceId('Microsoft.Network/virtualNetworks',variables('vnetName'))]",
+    "ipconfName": "[concat(variables('vmName'),'-ipconf')]",
+    "subnetName": "[concat(variables('vmName'),'-subnet')]",
+    "intName": "[concat(variables('vmName'),'-nic')]",
+    "AgentName": "[concat(variables('vmName'),'/AgentExtV0.1')]",
+	"DriversExtName": "[concat(variables('vmName'),'/DriversExtV0.1')]",
+    "intId": "[resourceId('Microsoft.Network/networkInterfaces',variables('intName'))]",
+    
+    "networkSecurityGroupName": "[concat(variables('vmName'),'-nsg')]",
+    "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+    "VNetAddressSpacePrefix": "10.0.0.0/28",
+    "SNetAddressRangePrefix": "10.0.0.0/29",
 
-  "VNetAddressSpacePrefix": "[first(parameters('vNetARPrefixes'))]",
-  "SNetAddressRangePrefix": "[parameters('subnetARPrefix')]",
+    "deployFileUris": "https://pcoipgraphicsagent.blob.core.windows.net/pcoip/DeployPCoIPAgent.ps1",
+    "cmdToExecute": "powershell.exe -ExecutionPolicy Unrestricted -File DeployPCoIPAgent.ps1",
+    "stoAccountName": "pcoipgraphicsagent",
+    "stoAccountKey": "ENTER SA KEY HERE",
   
-  "PCoIPAgentEXE": "pcoip-agent-graphics_20.01.1.exe",
-  "Script2Run": "DeployPCoIPAgent.ps1",
-  "PCoIPAgentPath": "[uri(parameters('_artifactsLocation'), concat(variables('PCoIPAgentEXE'), parameters('_artifactsLocationSasToken')))]",
-  "Sript2RunUri" :"[ uri(parameters('_artifactsLocation'),concat(variables('Script2Run'), parameters('_artifactsLocationSasToken')))]",
-  
-  "ScriptParams":  "[concat(' -TeraRegKey ', parameters('TeradiciRegKey'),' -PCoIPAgentUri ' ,variables('PCoIPAgentPath') ,' -PCoIPAgentEXE ', variables('PCoIPAgentEXE'))]",
-  "cmdToExecute":  "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ',variables('Script2Run'),  variables('ScriptParams'))]",
+
+    "imageReference": {
+      "publisher": "MicrosoftWindowsServer",
+      "offer": "WindowsServer",
+      "sku": "2016-Datacenter",
+      "version": "latest"
+    },
     
-  "nsgRules": [
-    {
-      "name": "RDP",
-      "properties": {
-        "priority": 300,
-        "protocol": "TCP",
-        "access": "Allow",
-        "direction": "Inbound",
-        "sourceAddressPrefix": "*",
-        "sourcePortRange": "*",
-        "destinationAddressPrefix": "*",
-        "destinationPortRange": "3389"
-      }
-    },
-    {
-      "name": "PCoIPtcp",
-      "properties": {
-        "priority": 301,
-        "protocol": "TCP",
-        "access": "Allow",
-        "direction": "Inbound",
-        "sourceAddressPrefix": "*",
-        "sourcePortRange": "*",
-        "destinationAddressPrefix": "*",
-        "destinationPortRange": "4172"
-      }
-    },
-    {
-      "name": "PCoIPudp",
-      "properties": {
-        "priority": 302,
-        "protocol": "UDP",
-        "access": "Allow",
-        "direction": "Inbound",
-        "sourceAddressPrefix": "*",
-        "sourcePortRange": "*",
-        "destinationAddressPrefix": "*",
-        "destinationPortRange": "4172"
-      }
-    },
-    {
-      "name": "CertAuthHTTPS",
-      "properties": {
-        "priority": 303,
-        "protocol": "TCP",
-        "access": "Allow",
-        "direction": "Inbound",
-        "sourceAddressPrefix": "*",
-        "sourcePortRange": "*",
-        "destinationAddressPrefix": "*",
-        "destinationPortRange": "443"
-      }
-    },
-    {
-      "name": "TeradiciCom",
-      "properties": {
-        "priority": 304,
-        "protocol": "TCP",
-        "access": "Allow",
-        "direction": "Inbound",
-        "sourceAddressPrefix": "*",
-        "sourcePortRange": "*",
-        "destinationAddressPrefix": "*",
-        "destinationPortRange": "60443"
-      }
-    }
-  ]
-  
-},
-"resources": [
-  { 
-    "type": "Microsoft.Resources/deployments",
-    "apiVersion": "2016-09-01",
-    "name": "pid-0d95c7be-a922-5be2-841a-5381655bf4f1",
-    "properties": {
-        "mode": "Incremental",
-        "template": {
-            "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-            "contentVersion": "1.0.0.0",
-            "resources": []
+    "networkSecurityGroupRules": [
+      {
+        "name": "RDP",
+        "properties": {
+          "priority": 300,
+          "protocol": "TCP",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "*",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "3389"
         }
-    }
-  },
-  
-  {
-    "condition": "[equals(parameters('publicIpNewOrExisting'), 'new')]",
-    "type": "Microsoft.Network/publicIPAddresses",
-    "name": "[variables('pubIpName')]",
-    "apiVersion": "2019-04-01",
-    "sku": { "name": "[parameters('publicIpSku')]" },
-    "location": "[variables('location')]",
-    "properties": {
-      "publicIPAllocationMethod": "[parameters('publicIpAllocationMethod')]",
-      "dnsSettings": {
-        "domainNameLabel": "[variables('domainNameLabel')]"
-      }
-    }
-  },
-  {
-    "type": "Microsoft.Network/networkSecurityGroups",
-    "name": "[variables('nsgName')]",
-    "apiVersion": "2018-11-01",
-    "location": "[variables('location')]",
-    "properties": {
-      "securityRules": "[variables('nsgRules')]"
-    }
-    
-  },
-  {
-    "condition": "[equals(parameters('VNetNewOrExisting'), 'new')]",
-    "type": "Microsoft.Network/virtualNetworks",
-    "name": "[variables('vNetName')]",
-    "apiVersion":  "2019-04-01",
-    "location": "[variables('location')]",
-    "properties": {
-      "addressSpace": {
-        "addressPrefixes": [            
-          "[variables('VNetAddressSpacePrefix')]"
-        ]
       },
-      "subnets": [
-        {
-          "name": "[variables('subnetName')]",
-          "properties": {
-            "addressPrefix": "[variables('SNetAddressRangePrefix')]"
-          }
+      {
+        "name": "PCoIPtcp",
+        "properties": {
+          "priority": 301,
+          "protocol": "TCP",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "*",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "4172"
         }
-      ]
-    }
+      },
+      {
+        "name": "PCoIPudp",
+        "properties": {
+          "priority": 302,
+          "protocol": "UDP",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "*",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "4172"
+        }
+      },
+      {
+        "name": "certauthhttps",
+        "properties": {
+          "priority": 303,
+          "protocol": "TCP",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "*",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "443"
+        }
+      },
+      {
+        "name": "Teradici",
+        "properties": {
+          "priority": 304,
+          "protocol": "TCP",
+          "access": "Allow",
+          "direction": "Inbound",
+          "sourceAddressPrefix": "*",
+          "sourcePortRange": "*",
+          "destinationAddressPrefix": "*",
+          "destinationPortRange": "60443"
+        }
+      }
+    ]
+    
   },
-  {
-    "type": "Microsoft.Network/networkInterfaces",
-    "name": "[variables('nicName')]",
-    "apiVersion": "2019-04-01",
-    "location": "[variables('location')]",
-    "dependsOn": [
-      "[variables('pubIpId')]",
-      "[variables('vnetId')]",
-      "[variables('nsgId')]"
-    ],
-    "properties": {
-      "ipConfigurations": [
-        {
-          "name": "[variables('ipconfName')]",
-          "properties": {
-            "subnet": {
-              "id": "[variables('SubNetID')]"
-            },
-            "privateIPAllocationMethod": "Dynamic",
-            "publicIPAddress": {
-              "id": "[variables('pubIpId')]"
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('location')]",
+      "properties": {
+        "accountType": "Standard_LRS"
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('pubIpName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('domainNameLabel')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "apiVersion": "2018-08-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "securityRules": "[variables('networkSecurityGroupRules')]"
+      },
+      "tags": {}
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('vnetName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [            
+            "[variables('VNetAddressSpacePrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnetName')]",
+            "properties": {
+              "addressPrefix": "[variables('SNetAddressRangePrefix')]"
             }
           }
-        }
-      ],
-      "networkSecurityGroup": {
-        "id": "[variables('nsgId')]"
-      }
-    }
-  },
-  {
-    "type": "Microsoft.Compute/virtualMachines",
-    "name": "[variables('vmName')]",
-    "apiVersion": "2019-03-01",
-    "location": "[variables('location')]",
-    "dependsOn": [
-      "[variables('nicId')]"
-    ],
-    "properties": {
-      "hardwareProfile": {
-        "vmSize": "[variables('vmSize')]"
-      },
-      "storageProfile": {
-        "imageReference":  {
-          "publisher": "MicrosoftWindowsServer",
-          "offer": "WindowsServer",
-          "sku": "2016-Datacenter",
-          "version": "latest"
-        },
-        "osDisk": {
-          "osType": "Windows",
-          "name": "TeraDAgent-disk0",
-          "caching": "ReadWrite",
-          "createOption": "FromImage",
-          "managedDisk": {
-            "storageAccountType": "[variables('VMDiskType')]"
-          }
-        }
-      },
-      "osProfile": {
-        "computerName": "[variables('vmName')]",
-        "adminUsername": "[parameters('adminName')]",
-        "adminPassword": "[parameters('adminPass')]"
-      },
-      "networkProfile": {
-        "networkInterfaces": [
-          {
-            "id": "[variables('nicId')]"
-          }
         ]
       }
-    }
-  },
-  {
-    "type": "Microsoft.Compute/virtualMachines/extensions",
-    "name": "[variables('ExtName')]",
-    "apiVersion": "2018-06-01",
-    "location": "[variables('location')]",
-    "dependsOn": [
-      "[variables('vmName')]"
-    ],
-    "properties": {
-      "publisher": "Microsoft.Compute",
-      "type": "CustomScriptExtension",
-      "typeHandlerVersion": "1.9",
-      "autoUpgradeMinorVersion": true,      
-      "settings": {
-          "fileUris": [
-                "[uri(parameters('_artifactsLocation'), concat(variables('Script2Run'), parameters('_artifactsLocationSasToken')))]",
-                "[variables('Sript2RunUri')]"
-            ]
+    },
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('intName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[variables('pubIpId')]",
+        "[variables('vnetId')]",
+        "[variables('nsgId')]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "[variables('ipconfName')]",
+            "properties": {
+              "subnet": {
+                "id": "[concat(variables('vnetId'),'/subnets/',variables('subnetName'))]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[variables('pubIpId')]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[variables('nsgId')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[variables('vmName')]",
+      "apiVersion": "2018-04-01",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[variables('storageAccountId')]",
+        "[variables('intId')]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
         },
-      "protectedSettings": {
-             "commandToExecute": "[ variables('cmdToExecute')]"
-       }
+        "storageProfile": {
+          "imageReference": "[variables('imageReference')]",
+          "osDisk": {
+            "name": "sys0",
+            "vhd": {
+              "uri": "[concat(reference(variables('storageAccountId'),'2015-06-15').primaryEndpoints.blob,'vhds/sys0.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          },
+          "dataDisks": [
+            {
+              "name": "data1",
+              "diskSizeGB":20,
+              "lun": 0,
+              "vhd": {
+                "uri": "[concat(reference(variables('storageAccountId'),'2015-06-15').primaryEndpoints.blob,'vhds/data1.vhd')]"
+              },
+              "createOption": "Empty"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[variables('vmName')]",
+          "adminUsername": "[parameters('adminName')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[variables('intId')]"
+            }
+          ]
+        }
+      }
+    },
+	 {
+    "type": "Microsoft.Compute/virtualMachines/extensions",
+    "name": "[variables('DriversExtName')]",
+	  "apiVersion": "2018-06-01",	
+	  "location": "[variables('location')]",
+	"properties": {
+	   "publisher": "Microsoft.HpcCompute",
+       "type": "NvidiaGpuDriverWindows",
+       "typeHandlerVersion": "1.2",
+       "autoUpgradeMinorVersion": true,
+	   "settings": {
+     }
+    },
+	"dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vmName'))]"
+            ]
+  },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[variables('AgentName')]",
+      "apiVersion": "2015-06-15",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[variables('vmName')]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.8",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris":  [ "[variables('deployFileUris')]"  ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[ variables('cmdToExecute')]",
+          "storageAccountName": "[ variables('stoAccountName')]",
+          "storageAccountKey": "[ variables('stoAccountKey')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "Host Name": {
+      "type": "string",
+      "value": "[reference(variables('pubIpId')).dnsSettings.fqdn]"
+    },
+    "UserName": {
+      "type": "string",
+      "value": "[parameters('adminName')]"
+    },
+    "Password": {
+      "type": "string",
+      "value": "[parameters('adminPassword')]"
+    },
+    "IPAddress": {
+      "type":"string",
+      "value": "[variables('pubIpId')]"
     }
   }
-],
-"outputs": {
-  "Host Name": {
-    "type": "string",
-    "value": "[reference(variables('pubIpId')).dnsSettings.fqdn]"
-  },
-  "UserName": {
-    "type": "string",
-    "value": "[parameters('adminName')]"
-  },
-  "IPAddress": {
-    "type":"string",
-    "value": "[variables('pubIpId')]"
-  }
-}
 }
